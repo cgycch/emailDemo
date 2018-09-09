@@ -1,20 +1,31 @@
 package com.cch.common;
 
 
+import java.security.GeneralSecurityException;
 import java.util.Properties;
- 
+
+import javax.activation.DataHandler;
+import javax.activation.DataSource;
+import javax.activation.FileDataSource;
+import javax.mail.Address;
 import javax.mail.Authenticator;
+import javax.mail.BodyPart;
 import javax.mail.Message.RecipientType;
 import javax.mail.MessagingException;
+import javax.mail.Multipart;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
+
+import com.sun.mail.util.MailSSLSocketFactory;
 
 public class MailTest {
 
-	public static void main(String[] args) throws MessagingException{
+	public static void main(String[] args) throws MessagingException, GeneralSecurityException{
 		// 配置发送邮件的环境属性
 		final Properties props = new Properties();
 		/*
@@ -43,6 +54,12 @@ public class MailTest {
 				return new PasswordAuthentication(userName, password);
 			}
 		};
+		//还要设置SSL加密，加上以下代码即可
+		MailSSLSocketFactory sf = new MailSSLSocketFactory();
+        sf.setTrustAllHosts(true);
+        props.put("mail.smtp.ssl.enable", "true");
+        props.put("mail.smtp.ssl.socketFactory", sf);
+        
 		// 使用环境属性和授权信息，创建邮件会话
 		Session mailSession = Session.getInstance(props, authenticator);
 		// 创建邮件消息
@@ -52,14 +69,43 @@ public class MailTest {
 		message.setFrom(form);
 
 		// 设置收件人
-		InternetAddress to = new InternetAddress("1026373925@qq.com");
-		message.setRecipient(RecipientType.TO, to);
+		//InternetAddress to = new InternetAddress("1026373925@qq.com");
+		//message.setRecipient(RecipientType.TO, to);
+		//多人
+		Address[] addresses = new Address[] {
+				new InternetAddress("1026373925@qq.com"),
+				new InternetAddress("2856472470@qq.com")
+				};
+		message.addRecipients(RecipientType.TO, addresses);
 
 		// 设置邮件标题
 		message.setSubject("邮件的标题");
 
 		// 设置邮件的内容体
-		message.setContent("自己发送邮件的内容体", "text/html;charset=UTF-8");
+		//message.setContent("自己发送邮件的内容体", "text/html;charset=UTF-8");
+		// 发送 HTML 消息, 可以插入html标签
+        // message.setContent("<h1>This is actual message</h1>",
+        //                   "text/html;charset=UTF-8" );
+		
+		
+        // 创建消息部分
+        BodyPart messageBodyPart = new MimeBodyPart();
+        // 消息
+        messageBodyPart.setText("This is message body");      
+        // 创建多重消息
+        Multipart multipart = new MimeMultipart();
+        // 设置文本消息部分
+        multipart.addBodyPart(messageBodyPart);
+        // 附件部分
+        messageBodyPart = new MimeBodyPart();
+        String filename = "D:\\output\\123.xlsx";
+        DataSource source = new FileDataSource(filename);
+        messageBodyPart.setDataHandler(new DataHandler(source));
+        messageBodyPart.setFileName(filename);
+        multipart.addBodyPart(messageBodyPart);
+
+        // 发送完整消息
+        message.setContent(multipart );
 
 		// 发送邮件
 		Transport.send(message);
